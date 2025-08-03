@@ -3,79 +3,80 @@
 with base as (
 
     select
-        sp.user_pseudo_id,
-        sp.event_name,
-        sp.event_date,
-        sp.event_timestamp,
-        to_timestamp_ntz(sp.event_timestamp / 1000000) as event_time,
-        sp.platform,
-        sp.device_category,
-        sp.device_os,
-        sp.device_os_version,
-        sp.device_language,
-        sp.device_brand,
-        sp.device_model,
-        sp.browser,
-        sp.browser_version,
-        sp.geo_city,
-        sp.geo_country,
-        sp.geo_continent,
-        sp.geo_region,
-        sp.geo_subcontinent
-    from {{ ref('stg_ga4_payload') }} sp
+        *,
+        {{ dbt_utils.generate_surrogate_key([
+            'device_category',
+            'device_os',
+            'device_os_version',
+            'device_language',
+            'device_brand',
+            'device_model',
+            'browser',
+            'browser_version'
+        ]) }} as _device_id,
+
+        {{ dbt_utils.generate_surrogate_key([
+            'geo_city',
+            'geo_country',
+            'geo_continent',
+            'geo_region',
+            'geo_subcontinent'
+        ]) }} as _geo_id
+    from {{ ref('stg_ga4_payload') }}
 
 ),
 
-with_ids as (
+with_device as (
 
     select
         b.*,
-        d.device_id,
-        g.geo_id
+        d.device_id
     from base b
     left join {{ ref('dim_device') }} d
-        on {{ dbt_utils.generate_surrogate_key([
-            'b.device_category',
-            'b.device_os',
-            'b.device_os_version',
-            'b.device_language',
-            'b.device_brand',
-            'b.device_model',
-            'b.browser',
-            'b.browser_version'
-        ]) }} = d.device_id
-    left join {{ ref('dim_geo') }} g
-        on {{ dbt_utils.generate_surrogate_key([
-            'b.geo_city',
-            'b.geo_country',
-            'b.geo_continent',
-            'b.geo_region',
-            'b.geo_subcontinent'
-        ]) }} = g.geo_id
+        on b._device_id = d.device_id
+
 ),
 
-with_session_id as (
+with_geo as (
 
     select
-        w.*,
+        wd.*,
+        g.geo_id
+    from with_device wd
+    left join {{ ref('dim_geo') }} g
+        on wd._geo_id = g.geo_id
+
+),
+
+with_session as (
+
+    select
+        wg.*,
         s.session_id
-    from with_ids w
+    from with_geo wg
     left join {{ ref('dim_sessions') }} s
-      on w.user_pseudo_id = s.user_pseudo_id
-     and w.platform = s.platform
-     and w.stream_id = s.stream_id
-     and w.traffic_medium = s.traffic_medium
-     and w.traffic_source = s.traffic_source
-     and w.traffic_name = s.traffic_name
+        on wg.user_pseudo_id = s.user_pseudo_id
+        and wg.platform = s.platform
+        and wg.stream_id = s.stream_id
+        and wg.traffic_medium = s.traffic_medium
+        and wg.traffic_source = s.traffic_source
+        and wg.traffic_name = s.traffic_name
+
+),
+
+final as (
+
+    select
+        user_pseudo_id,
+        event_name,
+        event_date,
+        to_timestamp_ntz(event_timestamp / 1000000) as event_time,
+        platform,
+        device_id,
+        geo_id,
+        session_id
+    from with_session
+
 )
 
-select
-    user_pseudo_id,
-    event_name,
-    event_date,
-    event_time,
-    platform,
-    device_id,
-    geo_id,
-    session_id
-from with_session_id
+select * from final
