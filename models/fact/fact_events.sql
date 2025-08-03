@@ -72,6 +72,24 @@ with_user as (
     from with_session ws
     left join {{ ref('dim_users') }} u
         on ws.user_pseudo_id = u.user_pseudo_id
+),
+
+-- Nuevo CTE para unir los parámetros del evento
+with_params as (
+    select
+        wu.*,
+        p.ga_session_id,
+        p.page_location,
+        p.page_title,
+        p.session_engaged,
+        p.ga_session_number,
+        p.event_value,
+        p.event_currency
+    from with_user wu
+    left join {{ ref('stg_ga4_event_params_pivoted') }} p
+        on wu.user_pseudo_id = p.user_pseudo_id
+        and wu.event_timestamp = p.event_timestamp
+        and wu.event_name = p.event_name
 )
 
 select
@@ -82,5 +100,13 @@ select
     platform,
     device_id,
     geo_id,
-    session_id
-from with_user
+    session_id,
+    -- Nuevas columnas de parámetros
+    ga_session_id,
+    page_location,
+    page_title,
+    session_engaged,
+    ga_session_number,
+    event_value,
+    event_currency
+from with_params
