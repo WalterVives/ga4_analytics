@@ -37,6 +37,8 @@ aggregated as (
         traffic_name,
         min(event_date) as session_date,
         min(event_time) as session_start_time,
+        max(event_time) as session_end_time,
+        datediff('second', min(event_time), max(event_time)) as session_duration_seconds,
         count(*) as total_events,
         max(is_session_start) as has_session_start
     from session_events
@@ -68,6 +70,8 @@ select
     session_id,
     session_date,
     session_start_time,
+    session_end_time,
+    session_duration_seconds,
     total_events,
     has_session_start
 from with_session_id
