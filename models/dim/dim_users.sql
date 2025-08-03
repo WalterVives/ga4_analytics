@@ -5,7 +5,6 @@
 }}
 
 with source as (
-
     select * 
     from GA4_ANALYTICS.dev_waltervives.stg_ga4_payload
 
