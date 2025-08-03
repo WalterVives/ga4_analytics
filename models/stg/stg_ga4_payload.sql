@@ -1,54 +1,54 @@
 {{ 
     config(
         materialized = 'view'
-        )
+    )
 }}
 
-WITH source AS (
+with source as (
 
-    SELECT *
-    FROM {{ source('raw', 'ga4_payload') }}
+    select *
+    from {{ source('raw', 'ga4_payload') }}
 
 ),
 
-flattened AS (
+flattened as (
 
-    SELECT
+    select
         -- Identificadores
-        RAW:user_pseudo_id::string AS user_pseudo_id,
-        CAST(RAW:event_timestamp AS number) AS event_timestamp,
-        CAST(RAW:event_date AS string) AS event_date,
-        RAW:event_name::string AS event_name,
-        RAW:platform::string AS platform,
-        RAW:stream_id::number AS stream_id,
+        raw:user_pseudo_id::string as user_pseudo_id,
+        cast(raw:event_timestamp as number) as event_timestamp,
+        cast(raw:event_date as string) as event_date,
+        raw:event_name::string as event_name,
+        raw:platform::string as platform,
+        raw:stream_id::number as stream_id,
 
-        -- Device
-        RAW:device.category::string AS device_category,
-        RAW:device.operating_system::string AS device_os,
-        RAW:device.operating_system_version::string AS device_os_version,
-        RAW:device.language::string AS device_language,
-        RAW:device.mobile_brand_name::string AS device_brand,
-        RAW:device.mobile_model_name::string AS device_model,
-        RAW:web_info.browser::string AS browser,
-        RAW:web_info.browser_version::string AS browser_version,
+        -- Device (normalizados)
+        lower(trim(raw:device.category::string)) as device_category,
+        lower(trim(raw:device.operating_system::string)) as device_os,
+        lower(trim(raw:device.operating_system_version::string)) as device_os_version,
+        lower(trim(raw:device.language::string)) as device_language,
+        lower(trim(raw:device.mobile_brand_name::string)) as device_brand,
+        lower(trim(raw:device.mobile_model_name::string)) as device_model,
+        lower(trim(raw:web_info.browser::string)) as browser,
+        lower(trim(raw:web_info.browser_version::string)) as browser_version,
 
-        -- Geo
-        RAW:geo.city::string AS geo_city,
-        RAW:geo.country::string AS geo_country,
-        RAW:geo.continent::string as geo_continent,
-        RAW:geo.region::string AS geo_region,
-        RAW:geo.sub_continent::string AS geo_subcontinent,
+        -- Geo (normalizados)
+        lower(trim(raw:geo.city::string)) as geo_city,
+        lower(trim(raw:geo.country::string)) as geo_country,
+        lower(trim(raw:geo.continent::string)) as geo_continent,
+        lower(trim(raw:geo.region::string)) as geo_region,
+        lower(trim(raw:geo.sub_continent::string)) as geo_subcontinent,
 
-        -- Traffic
-        RAW:traffic_source.medium::string AS traffic_medium,
-        RAW:traffic_source.source::string AS traffic_source,
-        RAW:traffic_source.name::string AS traffic_name,
+        -- Traffic Source (normalizados)
+        lower(trim(raw:traffic_source.medium::string)) as traffic_medium,
+        lower(trim(raw:traffic_source.source::string)) as traffic_source,
+        lower(trim(raw:traffic_source.name::string)) as traffic_name,
 
         -- LTV
-        RAW:user_ltv.currency::string AS ltv_currency,
-        RAW:user_ltv.revenue::float AS ltv_revenue
+        lower(trim(raw:user_ltv.currency::string)) as ltv_currency,
+        cast(raw:user_ltv.revenue as float) as ltv_revenue
 
-    FROM source
+    from source
 )
 
-SELECT * FROM flattened
+select * from flattened
