@@ -1,0 +1,5 @@
+models:
+  - name: stg_ga4_payload
+    description: "This model contains the ga4 payload"
+  - name: stg_ga4_payload_event_params
+    description: "This model contains the event_params from GA4 flattened" 
