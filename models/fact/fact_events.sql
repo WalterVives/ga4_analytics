@@ -91,7 +91,7 @@ select
     device_id,
     geo_id,
     event_name,
-    platform
+    platform,
     event_date,
     event_time
 from
