@@ -41,9 +41,9 @@ with base as (
         {{ dbt_utils.generate_surrogate_key([
             'geo_city',
             'geo_country',
-            'geo_continent',
             'geo_region',
-            'geo_subcontinent'
+            'geo_subcontinent',
+            'geo_continent'
         ]) }} as _geo_id
 
     from {{ ref('stg_ga4_payload') }}
