@@ -64,14 +64,25 @@ with_session_id as (
      and a.traffic_medium = s.traffic_medium
      and a.traffic_source = s.traffic_source
      and a.traffic_name = s.traffic_name
+),
+
+with_user as (
+
+    select
+        ws.*,
+        u.user_id
+    from with_session_id ws
+    left join {{ ref('dim_users') }} u
+        on ws.user_pseudo_id = u.user_pseudo_id
 )
 
 select
     session_id,
+    user_id,
     session_date,
     session_start_time,
     session_end_time,
     session_duration_seconds,
     total_events,
     has_session_start
-from with_session_id
+from with_user

@@ -16,11 +16,11 @@ with base as (
         ]) }} as _device_id,
 
         {{ dbt_utils.generate_surrogate_key([
-                        'geo_city',
-                        'geo_country',
-                        'geo_region',
-                        'geo_subcontinent',
-                        'geo_continent'
+            'geo_city',
+            'geo_country',
+            'geo_region',
+            'geo_subcontinent',
+            'geo_continent'
         ]) }} as _geo_id
     from {{ ref('stg_ga4_payload') }}
 
@@ -64,19 +64,23 @@ with_session as (
 
 ),
 
-final as (
+with_user as (
 
     select
-        user_pseudo_id,
-        event_name,
-        event_date,
-        to_timestamp_ntz(event_timestamp / 1000000) as event_time,
-        platform,
-        device_id,
-        geo_id,
-        session_id
-    from with_session
-
+        ws.*,
+        u.user_id
+    from with_session ws
+    left join {{ ref('dim_users') }} u
+        on ws.user_pseudo_id = u.user_pseudo_id
 )
 
-select * from final
+select
+    user_id,
+    event_name,
+    event_date,
+    to_timestamp_ntz(event_timestamp / 1000000) as event_time,
+    platform,
+    device_id,
+    geo_id,
+    session_id
+from with_user
