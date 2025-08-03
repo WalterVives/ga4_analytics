@@ -86,4 +86,13 @@ final as (
 
 )
 
-select * from final
+select 
+    user_pseudo_id,
+    device_id,
+    geo_id,
+    event_name,
+    platform
+    event_date,
+    event_time
+from
+    final
