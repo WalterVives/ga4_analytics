@@ -2,25 +2,18 @@
 
 with base as (
 
-    -- Extraer eventos con su info y el ga_session_id
     select
-        s.user_pseudo_id,
-        s.event_timestamp,
-        to_timestamp_ntz(s.event_timestamp / 1000000) as event_time,
-        s.event_date,
-        s.event_name,
-        cast(s.param_value as number) as ga_session_id,
-
-        p.platform,
-        p.stream_id,
-        p.traffic_medium,
-        p.traffic_source,
-        p.traffic_name
-    from {{ ref('stg_ga4_payload_event_params') }} s
-    inner join {{ ref('stg_ga4_payload') }} p
-        on s.user_pseudo_id = p.user_pseudo_id
-        and s.event_timestamp = p.event_timestamp
-    where lower(s.param_key) = 'ga_session_id'
+        user_pseudo_id,
+        event_date,
+        event_timestamp,
+        event_name,
+        platform,
+        stream_id,
+        traffic_medium,
+        traffic_source,
+        traffic_name,
+        to_timestamp_ntz(event_timestamp / 1000000) as event_time
+    from {{ ref('stg_ga4_payload') }}
 
 ),
 
@@ -33,10 +26,9 @@ session_events as (
 
 ),
 
-sessions as (
+aggregated as (
 
     select
-        ga_session_id,
         user_pseudo_id,
         platform,
         stream_id,
@@ -45,19 +37,37 @@ sessions as (
         traffic_name,
         min(event_date) as session_date,
         min(event_time) as session_start_time,
-        max(event_time) as session_end_time,
-        datediff(second, min(event_time), max(event_time)) as session_duration_seconds,
         count(*) as total_events,
         max(is_session_start) as has_session_start
     from session_events
     group by
-        ga_session_id,
         user_pseudo_id,
         platform,
         stream_id,
         traffic_medium,
         traffic_source,
         traffic_name
+),
+
+with_session_id as (
+
+    select
+        a.*,
+        s.session_id
+    from aggregated a
+    left join {{ ref('dim_sessions') }} s
+      on a.user_pseudo_id = s.user_pseudo_id
+     and a.platform = s.platform
+     and a.stream_id = s.stream_id
+     and a.traffic_medium = s.traffic_medium
+     and a.traffic_source = s.traffic_source
+     and a.traffic_name = s.traffic_name
 )
 
-select * from sessions
+select
+    session_id,
+    session_date,
+    session_start_time,
+    total_events,
+    has_session_start
+from with_session_id
