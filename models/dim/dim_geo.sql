@@ -12,7 +12,7 @@ with source as (
         geo_continent,
         geo_region,
         geo_subcontinent
-    from {{ ref('stg_ga4_payload') }} -- GA4_ANALYTICS.dev_waltervives.stg_ga4_payload
+    from {{ ref('stg_ga4_payload') }}
 
 ),
 
