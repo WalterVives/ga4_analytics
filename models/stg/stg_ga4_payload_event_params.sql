@@ -1,30 +1,36 @@
-with source as (
+{{ 
+    config(
+        materialized = 'view'
+        )
+}}
 
-    select *
-    from {{ source('raw', 'ga4_payload') }}
+WITH source AS (
+
+    SELECT *
+    FROM {{ source('raw', 'ga4_payload') }}
 
 ),
 
-flattened_params as (
+flattened_params AS (
 
-    select
-        user_pseudo_id,
-        cast(event_timestamp as number) as event_timestamp,
-        cast(event_date as string) as event_date,
-        event_name,
-        
-        -- Flatten event_params
-        param.value:key::string as param_key,
-        coalesce(
-            cast(param.value:value.string_value as string),
-            cast(param.value:value.int_value as string),
-            cast(param.value:value.float_value as string),
-            cast(param.value:value.double_value as string)
-        ) as param_value
+    SELECT
+        RAW:user_pseudo_id::string AS user_pseudo_id,
+        CAST(RAW:event_timestamp AS number) AS event_timestamp,
+        CAST(RAW:event_date AS string) AS event_date,
+        RAW:event_name::string AS event_name,
 
-    from source,
-         lateral flatten(input => event_params) as param
+        -- Flatten de event_params
+        param.value:key::string AS param_key,
+        COALESCE(
+            param.value:value.string_value,
+            CAST(param.value:value.int_value AS string),
+            CAST(param.value:value.float_value AS string),
+            CAST(param.value:value.double_value AS string)
+        ) AS param_value
+
+    FROM source,
+         LATERAL FLATTEN(input => RAW:event_params) AS param
 
 )
 
-select * from flattened_params
+SELECT * FROM flattened_params
