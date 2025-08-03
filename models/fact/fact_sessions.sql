@@ -118,11 +118,11 @@ with_device as (
 select
     session_id,
     user_id,
+    device_id
     session_date,
     session_start_time,
     session_end_time,
     session_duration_seconds,
     total_events,
-    has_session_start,
-    device_id
+    has_session_start
 from with_device
