@@ -12,6 +12,14 @@ with base as (
         traffic_medium,
         traffic_source,
         traffic_name,
+        device_category,
+        device_os,
+        device_os_version,
+        device_language,
+        device_brand,
+        device_model,
+        browser,
+        browser_version,
         to_timestamp_ntz(event_timestamp / 1000000) as event_time
     from {{ ref('stg_ga4_payload') }}
 
@@ -35,6 +43,18 @@ aggregated as (
         traffic_medium,
         traffic_source,
         traffic_name,
+        
+        {{ dbt_utils.generate_surrogate_key([
+            'device_category',
+            'device_os',
+            'device_os_version',
+            'device_language',
+            'device_brand',
+            'device_model',
+            'browser',
+            'browser_version'
+        ]) }} as _device_id,
+
         min(event_date) as session_date,
         min(event_time) as session_start_time,
         max(event_time) as session_end_time,
@@ -48,7 +68,15 @@ aggregated as (
         stream_id,
         traffic_medium,
         traffic_source,
-        traffic_name
+        traffic_name,
+        device_category,
+        device_os,
+        device_os_version,
+        device_language,
+        device_brand,
+        device_model,
+        browser,
+        browser_version
 ),
 
 with_session_id as (
@@ -74,6 +102,17 @@ with_user as (
     from with_session_id ws
     left join {{ ref('dim_users') }} u
         on ws.user_pseudo_id = u.user_pseudo_id
+),
+
+with_device as (
+
+    select
+        wu.*,
+        d.device_id
+    from with_user wu
+    left join {{ ref('dim_device') }} d
+        on wu._device_id = d.device_id
+
 )
 
 select
@@ -84,5 +123,6 @@ select
     session_end_time,
     session_duration_seconds,
     total_events,
-    has_session_start
-from with_user
+    has_session_start,
+    device_id
+from with_device
