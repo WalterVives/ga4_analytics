@@ -5,8 +5,8 @@
 with distinct_event_types as (
 
     select distinct
-        raw:event_name::string as event_name
-    from {{ source('raw', 'ga4_payload') }}
+            event_name
+    from {{ ref('stg_ga4_payload') }}
 
 ),
 
