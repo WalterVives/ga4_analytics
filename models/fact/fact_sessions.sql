@@ -5,10 +5,10 @@
 with params as (
 
     select
-        user_pseudo_id,
-        cast(event_timestamp as bigint) as event_timestamp,
-        cast(event_date as string) as event_date,
-        event_name,
+        raw:user_pseudo_id::string as user_pseudo_id,
+        cast(raw:event_timestamp as bigint) as event_timestamp,
+        cast(raw:event_date as string) as event_date,
+        raw:event_name::string as event_name,
         param.value:key::string as param_key,
         coalesce(
             param.value:value.string_value,
@@ -17,7 +17,7 @@ with params as (
             cast(param.value:value.double_value as string)
         ) as param_value
     from {{ source('raw', 'ga4_payload') }},
-         lateral flatten(input => event_params) as param
+         lateral flatten(input => raw:event_params) as param
 
 ),
 
