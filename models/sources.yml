@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: raw # Reference name {{source()}}
+    schema: raw
+    database: ga4_analytics
+    tables:
+      - name: ga4_payload
+        description: "Raw GA4 data loaded as VARIANT"
