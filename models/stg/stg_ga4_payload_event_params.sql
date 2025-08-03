@@ -16,7 +16,7 @@ flattened_params as (
         -- Flatten event_params
         param.value:key::string as param_key,
         coalesce(
-            param.value:value.string_value as string,
+            cast(param.value:value.string_value as string),
             cast(param.value:value.int_value as string),
             cast(param.value:value.float_value as string),
             cast(param.value:value.double_value as string)
