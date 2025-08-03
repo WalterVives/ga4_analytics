@@ -35,6 +35,7 @@ flattened AS (
         -- Geo
         RAW:geo.city::string AS geo_city,
         RAW:geo.country::string AS geo_country,
+        RAW:geo.continent::string as geo_continent,
         RAW:geo.region::string AS geo_region,
         RAW:geo.sub_continent::string AS geo_subcontinent,
 
