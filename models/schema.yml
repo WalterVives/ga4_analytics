@@ -1,5 +1,188 @@
+version: 2
+
 models:
   - name: stg_ga4_payload
-    description: "This model contains the ga4 payload"
+    description: "This model contains the GA4 payload"
+    columns:
+      - name: user_pseudo_id
+        tests: [not_null]
+      - name: event_timestamp
+        tests: [not_null]
+      - name: event_name
+        tests: [not_null]
+
   - name: stg_ga4_payload_event_params
-    description: "This model contains the event_params from GA4 flattened" 
+    description: "This model contains the event_params from GA4 flattened"
+    columns:
+      - name: user_pseudo_id
+        tests: [not_null]
+      - name: event_timestamp
+        tests: [not_null]
+      - name: event_name
+        tests: [not_null]
+      - name: param_key
+        tests: [not_null]
+      - name: param_value
+        tests: []
+
+  - name: dim_users
+    description: "User dimension"
+    columns:
+      - name: user_id
+        tests: [not_null, unique]
+      - name: user_pseudo_id
+        tests: [not_null]
+      - name: ltv_currency
+        tests: []
+      - name: ltv_revenue
+        tests: []
+
+  - name: dim_device
+    description: "Device dimension"
+    columns:
+      - name: device_id
+        tests: [not_null, unique]
+      - name: device_category
+        tests: []
+      - name: device_os
+        tests: []
+      - name: device_os_version
+        tests: []
+      - name: device_language
+        tests: []
+      - name: device_brand
+        tests: []
+      - name: device_model
+        tests: []
+      - name: browser
+        tests: []
+      - name: browser_version
+        tests: []
+
+  - name: dim_geo
+    description: "Geographic dimension"
+    columns:
+      - name: geo_id
+        tests: [not_null, unique]
+      - name: geo_city
+        tests: []
+      - name: geo_country
+        tests: []
+      - name: geo_continent
+        tests: []
+      - name: geo_region
+        tests: []
+      - name: geo_subcontinent
+        tests: []
+
+  - name: dim_dates
+    description: "Date dimension"
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
+      - name: year
+        tests: []
+      - name: quarter
+        tests: []
+      - name: montn
+        tests: []
+      - name: month_name
+        tests: []
+      - name: week
+        tests: []
+      - name: day_of_week
+        tests: []
+      - name: day_name
+        tests: []
+      - name: is_weeknd
+        tests: []
+
+  - name: dim_sessions
+    description: "Session dimension"
+    columns:
+      - name: session_id
+        tests: [not_null, unique]
+      - name: ga_session_id
+        tests: []
+      - name: user_pseudo_id
+        tests: [not_null]
+      - name: platform
+        tests: []
+      - name: stream_id
+        tests: []
+      - name: traffic_medium
+        tests: []
+      - name: traffic_source
+        tests: []
+      - name: traffic_name
+        tests: []
+
+  - name: fact_events
+    description: "Fact table for GA4 events"
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+      - name: user_id
+        tests: [not_null]
+      - name: event_name
+        tests: [not_null]
+      - name: event_date
+        tests: []
+      - name: event_time
+        tests: []
+      - name: platform
+        tests: []
+      - name: device_id
+        tests: []
+      - name: geo_id
+        tests: []
+      - name: session_id
+        tests: []
+      - name: ga_session_id
+        tests: []
+      - name: page_location
+        tests: []
+      - name: page_title
+        tests: []
+      - name: session_engaged
+        tests: []
+      - name: ga_session_number
+        tests: []
+      - name: event_value
+        tests: []
+      - name: event_currency
+        tests: []
+
+  - name: fact_sessions
+    description: "Fact table for GA4 sessions"
+    columns:
+      - name: session_id
+        tests: [not_null, unique]
+      - name: ga_session_id
+        tests: []
+      - name: user_id
+        tests: [not_null]
+      - name: device_id
+        tests: []
+      - name: platform
+        tests: []
+      - name: stream_id
+        tests: []
+      - name: traffic_medium
+        tests: []
+      - name: traffic_source
+        tests: []
+      - name: traffic_name
+        tests: []
+      - name: session_date
+        tests: []
+      - name: session_start_time
+        tests: []
+      - name: session_end_time
+        tests: []
+      - name: session_duration_seconds
+        tests: []
+      - name: total_events
+        tests: []
+      - name: has_session_start
+        tests: []
