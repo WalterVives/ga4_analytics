@@ -1,14 +1,13 @@
 {{ config(materialized = 'view') }}
 
-with stg_payload as (
-
-    select *
-    from {{ ref('stg_ga4_payload') }}
-
-),
+-- No necesitamos stg_payload CTE si lo unimos directamente en la siguiente CTE
+-- with stg_payload as (
+--     select *
+--     from {{ ref('stg_ga4_payload') }}
+-- ),
 
 -- 1. CTE para unir los parámetros del evento
-with_params as (
+with with_params as (
     select
         s.*,
         p.ga_session_id,
@@ -18,7 +17,7 @@ with_params as (
         p.ga_session_number,
         p.event_value,
         p.event_currency
-    from stg_payload s
+    from {{ ref('stg_ga4_payload') }} s
     left join {{ ref('stg_ga4_event_params_pivoted') }} p
         on s.user_pseudo_id = p.user_pseudo_id
         and s.event_timestamp = p.event_timestamp
@@ -29,33 +28,42 @@ with_params as (
 with_dimension_keys as (
 
     select
-        p.*,
-        {{ dbt_utils.generate_surrogate_key([
-            'device_category',
-            'device_os',
-            'device_os_version',
-            'device_language',
-            'device_brand',
-            'device_model',
-            'browser',
-            'browser_version'
-        ]) }} as _device_id,
-
-        {{ dbt_utils.generate_surrogate_key([
-            'geo_city',
-            'geo_country',
-            'geo_region',
-            'geo_subcontinent',
-            'geo_continent'
-        ]) }} as _geo_id,
+        -- Seleccionamos explícitamente las columnas de `with_params` (aliased as p)
+        p.user_pseudo_id,
+        p.event_name,
+        p.event_date,
+        p.event_timestamp,
+        p.platform,
+        -- Atributos de dispositivo para generar la clave
+        p.device_category,
+        p.device_os,
+        p.device_os_version,
+        p.device_language,
+        p.device_brand,
+        p.device_model,
+        p.browser,
+        p.browser_version,
+        -- Atributos de geo para generar la clave
+        p.geo_city,
+        p.geo_country,
+        p.geo_region,
+        p.geo_subcontinent,
+        p.geo_continent,
+        p.ga_session_id,
+        p.page_location,
+        p.page_title,
+        p.session_engaged,
+        p.ga_session_number,
+        p.event_value,
+        p.event_currency,
         
-        -- Clave de sesión
-        {{ dbt_utils.generate_surrogate_key(['ga_session_id', 'user_pseudo_id']) }} as session_id_from_ga,
-
-        -- Unir con las dimensiones
+        -- Claves de dimensiones unidas
         d.device_id,
         g.geo_id,
-        u.user_id
+        u.user_id,
+
+        -- Clave de sesión
+        {{ dbt_utils.generate_surrogate_key(['p.ga_session_id', 'p.user_pseudo_id']) }} as session_id
 
     from with_params p
     left join {{ ref('dim_device') }} d
@@ -81,7 +89,6 @@ with_dimension_keys as (
         on p.user_pseudo_id = u.user_pseudo_id
 )
 
-
 select
     {{ dbt_utils.generate_surrogate_key(['event_name', 'event_timestamp', 'user_pseudo_id']) }} as event_id,
     user_id,
@@ -91,8 +98,8 @@ select
     platform,
     device_id,
     geo_id,
-    session_id_from_ga as session_id,
-    ga_session_id, -- El ID de sesión natural de GA4
+    session_id,
+    ga_session_id,
     page_location,
     page_title,
     session_engaged,
