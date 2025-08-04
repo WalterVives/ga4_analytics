@@ -23,7 +23,7 @@ with_id as (
 
 select
     user_id,
-    -- user_pseudo_id,
+    user_pseudo_id,
     ltv_currency,
     ltv_revenue
 from with_id
