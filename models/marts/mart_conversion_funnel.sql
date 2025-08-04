@@ -8,7 +8,10 @@ with sessions as (
     select
         user_id,
         count(*) as total_sessions,
-        sum(case when session_engaged = '1' then 1 else 0 end) as engaged_sessions
+
+        -- Consideramos sesiones de más de 10s como engaged
+        sum(case when session_duration_seconds > 10 then 1 else 0 end) as engaged_sessions
+
     from {{ ref('fact_sessions') }}
     group by user_id
 ),
