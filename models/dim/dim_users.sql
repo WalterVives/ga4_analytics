@@ -4,9 +4,6 @@ with source as (
 
     select distinct
         user_pseudo_id,
-        traffic_medium,
-        traffic_source,
-        traffic_name,
         ltv_currency,
         ltv_revenue
     from {{ ref('stg_ga4_payload') }}
@@ -27,9 +24,6 @@ with_id as (
 select
     user_id,
     user_pseudo_id,
-    traffic_medium,
-    traffic_source,
-    traffic_name,
     ltv_currency,
     ltv_revenue
 from with_id

@@ -1,83 +1,15 @@
 {{ config(materialized = 'view') }}
 
-with base as (
+-- No necesitamos stg_payload CTE si lo unimos directamente en la siguiente CTE
+-- with stg_payload as (
+--     select *
+--     from {{ ref('stg_ga4_payload') }}
+-- ),
 
+-- 1. CTE para unir los parámetros del evento
+with with_params as (
     select
-        *,
-        {{ dbt_utils.generate_surrogate_key([
-            'device_category',
-            'device_os',
-            'device_os_version',
-            'device_language',
-            'device_brand',
-            'device_model',
-            'browser',
-            'browser_version'
-        ]) }} as _device_id,
-
-        {{ dbt_utils.generate_surrogate_key([
-            'geo_city',
-            'geo_country',
-            'geo_region',
-            'geo_subcontinent',
-            'geo_continent'
-        ]) }} as _geo_id
-    from {{ ref('stg_ga4_payload') }}
-
-),
-
-with_device as (
-
-    select
-        b.*,
-        d.device_id
-    from base b
-    left join {{ ref('dim_device') }} d
-        on b._device_id = d.device_id
-
-),
-
-with_geo as (
-
-    select
-        wd.*,
-        g.geo_id
-    from with_device wd
-    left join {{ ref('dim_geo') }} g
-        on wd._geo_id = g.geo_id
-
-),
-
-with_session as (
-
-    select
-        wg.*,
-        s.session_id
-    from with_geo wg
-    left join {{ ref('dim_sessions') }} s
-        on wg.user_pseudo_id = s.user_pseudo_id
-        and wg.platform = s.platform
-        and wg.stream_id = s.stream_id
-        and wg.traffic_medium = s.traffic_medium
-        and wg.traffic_source = s.traffic_source
-        and wg.traffic_name = s.traffic_name
-
-),
-
-with_user as (
-
-    select
-        ws.*,
-        u.user_id
-    from with_session ws
-    left join {{ ref('dim_users') }} u
-        on ws.user_pseudo_id = u.user_pseudo_id
-),
-
--- Nuevo CTE para unir los parámetros del evento
-with_params as (
-    select
-        wu.*,
+        s.*,
         p.ga_session_id,
         p.page_location,
         p.page_title,
@@ -85,14 +17,80 @@ with_params as (
         p.ga_session_number,
         p.event_value,
         p.event_currency
-    from with_user wu
+    from {{ ref('stg_ga4_payload') }} s
     left join {{ ref('stg_ga4_event_params_pivoted') }} p
-        on wu.user_pseudo_id = p.user_pseudo_id
-        and wu.event_timestamp = p.event_timestamp
-        and wu.event_name = p.event_name
+        on s.user_pseudo_id = p.user_pseudo_id
+        and s.event_timestamp = p.event_timestamp
+        and s.event_name = p.event_name
+),
+
+-- 2. CTE para generar y unir las claves de dimensiones (device, geo, user)
+with_dimension_keys as (
+
+    select
+        -- Seleccionamos explícitamente las columnas de `with_params` (aliased as p)
+        p.user_pseudo_id,
+        p.event_name,
+        p.event_date,
+        p.event_timestamp,
+        p.platform,
+        -- Atributos de dispositivo para generar la clave
+        p.device_category,
+        p.device_os,
+        p.device_os_version,
+        p.device_language,
+        p.device_brand,
+        p.device_model,
+        p.browser,
+        p.browser_version,
+        -- Atributos de geo para generar la clave
+        p.geo_city,
+        p.geo_country,
+        p.geo_region,
+        p.geo_subcontinent,
+        p.geo_continent,
+        p.ga_session_id,
+        p.page_location,
+        p.page_title,
+        p.session_engaged,
+        p.ga_session_number,
+        p.event_value,
+        p.event_currency,
+        
+        -- Claves de dimensiones unidas
+        d.device_id,
+        g.geo_id,
+        u.user_id,
+
+        -- Clave de sesión
+        {{ dbt_utils.generate_surrogate_key(['p.ga_session_id', 'p.user_pseudo_id']) }} as session_id
+
+    from with_params p
+    left join {{ ref('dim_device') }} d
+        on {{ dbt_utils.generate_surrogate_key([
+            'p.device_category',
+            'p.device_os',
+            'p.device_os_version',
+            'p.device_language',
+            'p.device_brand',
+            'p.device_model',
+            'p.browser',
+            'p.browser_version'
+        ]) }} = d.device_id
+    left join {{ ref('dim_geo') }} g
+        on {{ dbt_utils.generate_surrogate_key([
+            'p.geo_city',
+            'p.geo_country',
+            'p.geo_region',
+            'p.geo_subcontinent',
+            'p.geo_continent'
+        ]) }} = g.geo_id
+    left join {{ ref('dim_users') }} u
+        on p.user_pseudo_id = u.user_pseudo_id
 )
 
 select
+    {{ dbt_utils.generate_surrogate_key(['event_name', 'event_timestamp', 'user_pseudo_id']) }} as event_id,
     user_id,
     event_name,
     event_date,
@@ -101,7 +99,6 @@ select
     device_id,
     geo_id,
     session_id,
-    -- Nuevas columnas de parámetros
     ga_session_id,
     page_location,
     page_title,
@@ -109,4 +106,4 @@ select
     ga_session_number,
     event_value,
     event_currency
-from with_params
+from with_dimension_keys
