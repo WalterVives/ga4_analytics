@@ -96,27 +96,7 @@ models:
         tests: []
       - name: is_weeknd
         tests: []
-
-  - name: dim_sessions
-    description: "Session dimension"
-    columns:
-      - name: session_id
-        tests: [not_null, unique]
-      - name: ga_session_id
-        tests: []
-      - name: user_pseudo_id
-        tests: [not_null]
-      - name: platform
-        tests: []
-      - name: stream_id
-        tests: []
-      - name: traffic_medium
-        tests: []
-      - name: traffic_source
-        tests: []
-      - name: traffic_name
-        tests: []
-
+        
   - name: fact_events
     description: "Fact table for GA4 events"
     columns:
