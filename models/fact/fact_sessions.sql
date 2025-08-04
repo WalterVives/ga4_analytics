@@ -3,13 +3,19 @@
 -- 1. CTE para limpiar y seleccionar eventos de la tabla de staging
 with stg_payload as (
     select
-        user_pseudo_id,
+        raw:user_pseudo_id::string as user_pseudo_id,
         cast(RAW:event_timestamp as number) as event_timestamp,
         cast(RAW:event_date as string) as event_date,
         -- Generamos la clave de dispositivo
         {{ dbt_utils.generate_surrogate_key([
-            'device.category', 'device.operating_system', 'device.operating_system_version', 'device.language', 
-            'device.mobile_brand_name', 'device.mobile_model_name', 'web_info.browser', 'web_info.browser_version'
+            'raw:device.category::string', 
+            'raw:device.operating_system::string', 
+            'raw:device.operating_system_version::string', 
+            'raw:device.language::string', 
+            'raw:device.mobile_brand_name::string', 
+            'raw:device.mobile_model_name::string', 
+            'raw:web_info.browser::string', 
+            'raw:web_info.browser_version::string'
         ]) }} as _device_id,
         -- Extraemos los parámetros de sesión clave
         MAX(CASE WHEN param.value:key::string = 'ga_session_id' THEN CAST(param.value:value.int_value AS number) END) AS ga_session_id,
@@ -18,10 +24,35 @@ with stg_payload as (
         raw:stream_id::number as stream_id,
         raw:traffic_source.medium::string as traffic_medium,
         raw:traffic_source.source::string as traffic_source,
-        raw:traffic_source.name::string as traffic_name
+        raw:traffic_source.name::string as traffic_name,
+        -- Atributos de dispositivo para el GROUP BY
+        raw:device.category::string as device_category,
+        raw:device.operating_system::string as device_os,
+        raw:device.operating_system_version::string as device_os_version,
+        raw:device.language::string as device_language,
+        raw:device.mobile_brand_name::string as device_brand,
+        raw:device.mobile_model_name::string as device_model,
+        raw:web_info.browser::string as browser,
+        raw:web_info.browser_version::string as browser_version
     from {{ source('raw', 'ga4_payload') }},
     LATERAL FLATTEN(input => RAW:event_params) AS param
-    group by 1, 2, 3, 4, 11, 12, 13, 14
+    group by
+        raw:user_pseudo_id::string, 
+        event_timestamp, 
+        event_date,
+        device_category,
+        device_os,
+        device_os_version,
+        device_language,
+        device_brand,
+        device_model,
+        browser,
+        browser_version,
+        raw:platform::string,
+        raw:stream_id::number,
+        raw:traffic_source.medium::string,
+        raw:traffic_source.source::string,
+        raw:traffic_source.name::string
 ),
 
 -- 2. CTE para agregar los datos a nivel de sesión
